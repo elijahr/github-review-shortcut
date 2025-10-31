@@ -105,6 +105,9 @@
     }
 
     function handleKeyDown(event) {
+      if (event.key !== 'Escape') {
+          return;
+      }
         toggleFileAsViewed();
     }
 })();

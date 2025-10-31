@@ -1,59 +1,85 @@
-// ==UserScript==
-// @name         GitHub PR review keyboard shortcut
-// @version      0.2
-// @description  Mark file as "viewed" on GitHub PR UI when hovering and pressing 'Escape' key
-// @match        https://github.com/*
-// @author       dvdvdmt, nbolton
-// @source       https://github.com/nbolton/github-review-shortcut
-// @namespace    https://github.com/nbolton/github-review-shortcut
-// @license      MIT
-// ==/UserScript==
 
-(function() {
-    'use strict';
+  // ==UserScript==
+  // @name         GitHub PR review keyboard shortcut
+  // @version      0.5
+  // @description  Mark file as "viewed" on GitHub PR UI when hovering and pressing 'Escape' key, or unmark with Shift+Escape
+  // @match        https://github.com/*
+  // @author       dvdvdmt, nbolton, elijahr
+  // @source       https://github.com/elijahr/github-review-shortcut
+  // @namespace    https://github.com/elijahr/github-review-shortcut
+  // @license      MIT
+  // ==/UserScript==
+  (function() {
+      'use strict';
+      if (window.disposeMarkAsViewedByEscape) {
+          window.disposeMarkAsViewedByEscape();
+      }
+      window.disposeMarkAsViewedByEscape = start();
 
-    if (window.disposeMarkAsViewedByEscape) {
-        window.disposeMarkAsViewedByEscape();
-    }
+      function start() {
+          window.addEventListener('keydown', handleKeyDown)
+          return () => window.removeEventListener('keydown', handleKeyDown);
+      }
 
-    window.disposeMarkAsViewedByEscape = start();
+      function isElementInViewport(el) {
+          const rect = el.getBoundingClientRect();
+          return (
+              rect.top < (window.innerHeight || document.documentElement.clientHeight) &&
+              rect.bottom > 0 &&
+              rect.left < (window.innerWidth || document.documentElement.clientWidth) &&
+              rect.right > 0
+          );
+      }
 
-    function start() {
-        window.addEventListener('keydown', handleKeyDown)
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }
+      function toggleFileAsViewed() {
+          let fileElement = document.querySelector('[class^="Diff-module__diffTargetable--"]:hover');
 
-    function markFileAsViewed() {
-        console.debug("Marking file as viewed");
+          if (!fileElement) {
+              console.debug("No file element under cursor, checking for alternatives");
+              const allDiffElements = document.querySelectorAll('[class^="Diff-module__diffTargetable--"]');
 
-        const fileElement = document.querySelector(`[id^="diff-"]:hover`);
-        if (!fileElement){
-            console.warn("No file element under cursor");
-            return;
-        }
+              if (allDiffElements.length === 1) {
+                  console.debug("Found single diff element, using it");
+                  fileElement = allDiffElements[0];
+              } else if (allDiffElements.length > 1) {
+                  console.debug("Multiple diff elements found, finding first in viewport");
+                  fileElement = Array.from(allDiffElements).find(el => isElementInViewport(el));
+              }
+          }
+          console.debug("Found", fileElement);
 
-        console.debug("File element found, finding buttons");
-        const buttons = [...fileElement.querySelectorAll('button')];
-        if (buttons.length === 0) {
-            console.warn("No buttons found in file element");
-            return;
-        }
+          if (!fileElement){
+              console.warn("No file element found");
+              return;
+          }
 
-        console.debug("Buttons found, finding checkbox");
-        const checkbox = buttons.find(btn => btn.textContent.trim() === 'Viewed');
-        if (!checkbox) {
-            console.warn("No checkbox found for file ement");
-            return;
-        }
+          console.debug("File element found, finding buttons");
+          const buttons = [...fileElement.querySelectorAll('button')];
+          if (buttons.length === 0) {
+              console.warn("No buttons found in file element");
+              return;
+          }
+          console.debug("Buttons found, finding checkbox");
+          const checkbox = buttons.find(btn => btn.textContent.trim() === 'Viewed');
+          if (!checkbox) {
+              console.warn("No checkbox found for file element");
+              return;
+          }
 
-        console.debug("Clicking checkbox");
-        checkbox.click();
-    }
+          // Check if checkbox is currently checked
+          const isChecked = checkbox.getAttribute('aria-checked') === 'true';
 
-    function handleKeyDown() {
-        if (event.key === 'Escape') {
-            markFileAsViewed();
-        }
-    }
+          // Only click if we need to change the state
+          if (!isChecked) {
+              console.debug("Clicking checkbox to mark as viewed");
+              checkbox.click();
+          } else if (isChecked) {
+              console.debug("Clicking checkbox to unmark as viewed");
+              checkbox.click();
+          }
+      }
 
-})();
+      function handleKeyDown(event) {
+          toggleFileAsViewed();
+      }
+  })();

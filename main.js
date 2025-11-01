@@ -1,7 +1,6 @@
-
 // ==UserScript==
 // @name         GitHub PR review keyboard shortcut
-// @version      0.6
+// @version      0.7.1
 // @description  Mark file as "viewed" on GitHub PR UI when hovering and pressing 'Escape' key, or unmark with Shift+Escape
 // @match        https://github.com/*
 // @author       dvdvdmt, nbolton, elijahr
@@ -29,19 +28,6 @@
             rect.left < (window.innerWidth || document.documentElement.clientWidth) &&
             rect.right > 0
         );
-    }
-
-    function simulateKeyPress(key) {
-        const event = new KeyboardEvent('keydown', {
-            key: key,
-            code: key === 'j' ? 'KeyJ' : 'KeyK',
-            keyCode: key === 'j' ? 74 : 75,
-            which: key === 'j' ? 74 : 75,
-            bubbles: true,
-            cancelable: true
-        });
-        document.dispatchEvent(event);
-        console.debug(`Simulated '${key}' keypress`);
     }
 
     function toggleFileAsViewed() {
@@ -88,26 +74,16 @@
         if (!isChecked) {
             console.debug("Clicking checkbox to mark as viewed");
             checkbox.click();
-
-            // If single element and marking as viewed, simulate 'j' to go to next file
-            if (isSingleElement) {
-                setTimeout(() => simulateKeyPress('j'), 100);
-            }
         } else if (isChecked) {
             console.debug("Clicking checkbox to unmark as viewed");
             checkbox.click();
-
-            // If single element and unmarking as viewed, simulate 'k' to go to previous file
-            if (isSingleElement) {
-                setTimeout(() => simulateKeyPress('k'), 100);
-            }
         }
     }
 
     function handleKeyDown(event) {
-      if (event.key !== 'Escape') {
-          return;
-      }
+        if (event.key !== 'Escape') {
+            return;
+        }
         toggleFileAsViewed();
     }
 })();
